@@ -21,7 +21,7 @@ cd embed-1-{グループID}
 
 ```bash
 # フォルダをコピーして自分用に作成
-cp -r members/your-github-id members/{あなたのGitHub ID}
+cp -r members/your-github-id members/Izuho-Wada-TP
 ```
 
 Windowsのコマンドプロンプトの場合：
@@ -34,7 +34,7 @@ xcopy members\your-github-id members\{あなたのGitHub ID}\ /E /I
 ## ③ テンプレートを自分のdocsフォルダにコピーする
 
 ```bash
-cp templates/requirements_template.md members/{あなたのGitHub ID}/docs/requirements.md
+cp templates/requirements_template.md members/Izuho-Wada-TP/docs/requirements.md
 ```
 
 ---
@@ -42,8 +42,8 @@ cp templates/requirements_template.md members/{あなたのGitHub ID}/docs/requi
 ## ④ 初回コミット＆プッシュ
 
 ```bash
-git add members/{あなたのGitHub ID}/
-git commit -m "init: {あなたのGitHub ID} フォルダを作成"
+git add members/Izuho-Wada-TP/
+git commit -m "init: Izuho-Wada-TP フォルダを作成"
 git push
 ```
 
