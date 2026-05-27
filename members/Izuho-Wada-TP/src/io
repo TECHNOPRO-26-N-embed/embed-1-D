@@ -1,0 +1,38 @@
+// ピン定義
+const int PIN_BUTTON = 2;   // タクトスイッチ（INPUT_PULLUP）
+const int PIN_TRIG   = 7;   // 超音波センサー Trig
+const int PIN_ECHO   = 8;   // 超音波センサー Echo
+
+void setup() {
+  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  pinMode(PIN_TRIG, OUTPUT);
+  pinMode(PIN_ECHO, INPUT);
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  // ボタンが押されたら（LOW）
+  if (digitalRead(PIN_BUTTON) == LOW) {
+
+    // 超音波パルス送信
+    digitalWrite(PIN_TRIG, LOW);
+    delayMicroseconds(2);
+    digitalWrite(PIN_TRIG, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(PIN_TRIG, LOW);
+
+    // Echo パルスの長さを取得
+    long duration = pulseIn(PIN_ECHO, HIGH);
+
+    // 距離(cm)に変換
+    long distance = duration * 0.017;
+
+    // 結果表示
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    delay(300); // 連打防止の軽い待ち
+  }
+}
