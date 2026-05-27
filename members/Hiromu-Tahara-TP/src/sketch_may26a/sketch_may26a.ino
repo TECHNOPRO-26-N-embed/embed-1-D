@@ -1,33 +1,34 @@
 // =========================
 // ピン定義
 // =========================
-const int PIN_TRIG = 7;
-const int PIN_ECHO = 8;
+const int PIN_TRIG = 7;   // 超音波センサー：トリガー
+const int PIN_ECHO = 8;   // 超音波センサー：エコー
 
-const int PIN_LED_R = 6;  // PWM
-const int PIN_LED_G = 5;  // PWM
-const int PIN_LED_B = 3;  // PWM
+const int PIN_LED_R = 6;  // RGB LED（赤）PWM
+const int PIN_LED_G = 5;  // RGB LED（緑）PWM
+const int PIN_LED_B = 3;  // RGB LED（青）PWM
 
-const int PIN_BUTTON = 2; // ← 追加（モード切り替えボタン）
+const int PIN_BUTTON = 2; // モード切り替えボタン（プルアップ入力）
 
 // =========================
 // グローバル変数
 // =========================
-unsigned long lastMillisMeasure = 0;
-unsigned long blinkMillis = 0;
+unsigned long lastMillisMeasure = 0; // 距離測定のタイマー
+unsigned long blinkMillis = 0;       // 点滅制御用タイマー
 
-int distance = 0;
+int distance = 0; // 現在の距離（cm）
 
-bool isBlinkMode = false;
-bool ledState = false;
+bool isBlinkMode = false; // 点滅モードかどうか
+bool ledState = false;    // 点滅 ON/OFF 状態
 
-int blinkInterval = 500;
+int blinkInterval = 500;  // 点滅間隔（ms）
 
+// LED の RGB 値
 int ledR = 0;
 int ledG = 0;
 int ledB = 0;
 
-const int MEASURE_INTERVAL = 100;
+const int MEASURE_INTERVAL = 100; // 距離測定間隔（ms）
 
 // =========================
 // ボタン用（デバウンス）
@@ -35,22 +36,22 @@ const int MEASURE_INTERVAL = 100;
 bool buttonState = LOW;
 bool lastButtonState = LOW;
 unsigned long lastDebounceTime = 0;
-const unsigned long DEBOUNCE_DELAY = 30;
+const unsigned long DEBOUNCE_DELAY = 30; // チャタリング除去時間
 
 // =========================
 // モード管理
 // =========================
 enum Mode {
-  MODE_DISTANCE,
-  MODE_LIGHT
+  MODE_DISTANCE, // 距離に応じて色が変わるモード
+  MODE_LIGHT     // 手かざしライトモード
 };
 Mode currentMode = MODE_DISTANCE;
 
 // =========================
 // 通常ライトモード用
 // =========================
-bool whiteLightState = false;
-bool handDetectedLast = false;
+bool whiteLightState = false; // 白色ライトの ON/OFF
+bool handDetectedLast = false; // 手が近い状態の保持
 
 // =========================
 // setup()
@@ -65,7 +66,7 @@ void setup() {
   pinMode(PIN_LED_G, OUTPUT);
   pinMode(PIN_LED_B, OUTPUT);
 
-  pinMode(PIN_BUTTON, INPUT_PULLUP); // ← 追加
+  pinMode(PIN_BUTTON, INPUT_PULLUP); // ボタンはプルアップで使用
 
   digitalWrite(PIN_TRIG, LOW);
   delay(200);
@@ -76,39 +77,42 @@ void setup() {
 // =========================
 void loop() {
 
-  // --- ボタンチェック ---
+  // --- ボタンチェック（押されたらモード切り替え） ---
   if (readButton()) {
     toggleMode();
   }
 
   // --- モードごとの処理 ---
   if (currentMode == MODE_DISTANCE) {
-    doMeasure();
-    doColorChange();
-    doBlinkControl();
-    updateLED();
+    doMeasure();       // 距離測定
+    doColorChange();   // 距離に応じた色決定
+    doBlinkControl();  // 点滅設定
+    updateLED();       // LED 出力
   }
   else if (currentMode == MODE_LIGHT) {
-    doLightMode();
+    doLightMode();     // 手かざしライトモード
   }
 }
 
 // =========================
-// ボタン読み取り（デバウンス）
+// ボタン読み取り（デバウンス付き）
 // =========================
 bool readButton() {
   bool reading = digitalRead(PIN_BUTTON);
   unsigned long now = millis();
 
+  // 状態が変わったらデバウンス開始
   if (reading != lastButtonState) {
     lastDebounceTime = now;
   }
 
+  // 一定時間経過後に確定
   if ((now - lastDebounceTime) > DEBOUNCE_DELAY) {
     if (reading != buttonState) {
       buttonState = reading;
 
-      if (buttonState == LOW) {  // 押された瞬間
+      // LOW = 押された瞬間
+      if (buttonState == LOW) {
         lastButtonState = reading;
         return true;
       }
@@ -131,6 +135,7 @@ void toggleMode() {
     currentMode = MODE_DISTANCE;
   }
 
+  // モード切り替え時は LED を消灯
   analogWrite(PIN_LED_R, 0);
   analogWrite(PIN_LED_G, 0);
   analogWrite(PIN_LED_B, 0);
@@ -140,30 +145,35 @@ void toggleMode() {
 }
 
 // =========================
-// 距離測定
+// 距離測定（超音波センサー）
 // =========================
 int readDistance() {
+  // トリガー信号
   digitalWrite(PIN_TRIG, LOW);
   delayMicroseconds(2);
-
   digitalWrite(PIN_TRIG, HIGH);
   delayMicroseconds(10);
   digitalWrite(PIN_TRIG, LOW);
 
+  // エコー時間を取得（最大 30ms）
   long duration = pulseIn(PIN_ECHO, HIGH, 30000);
-  if (duration == 0) return distance;
 
+  if (duration == 0) return distance; // 測定失敗時は前回値を返す
+
+  // 距離計算（cm）
   int dist = duration * 0.0343 / 2;
+
+  // 異常値は無視
   if (dist <= 0 || dist > 400) return distance;
 
   return dist;
 }
 
+// 測定タイミング管理
 void doMeasure() {
   unsigned long now = millis();
   if (now - lastMillisMeasure >= MEASURE_INTERVAL) {
-    int newDist = readDistance();
-    distance = newDist;
+    distance = readDistance();
     lastMillisMeasure = now;
 
     Serial.print("distance = ");
@@ -173,10 +183,10 @@ void doMeasure() {
 }
 
 // =========================
-// 色決定（距離反応モード）
+// 距離に応じた色決定
 // =========================
 void doColorChange() {
-  isBlinkMode = false;
+  isBlinkMode = false; // 初期状態は点滅なし
 
   if (distance > 30) {
     ledR = 0; ledG = 0; ledB = 255;   // 青
@@ -188,8 +198,9 @@ void doColorChange() {
     ledR = 255; ledG = 0; ledB = 0;   // 赤
   }
   else {
+    // 5cm以下 → 赤点滅
     isBlinkMode = true;
-    ledR = 255; ledG = 0; ledB = 0;   // 赤点滅
+    ledR = 255; ledG = 0; ledB = 0;
   }
 }
 
@@ -207,11 +218,13 @@ void updateLED() {
   unsigned long now = millis();
 
   if (isBlinkMode) {
+    // 点滅タイミング
     if (now - blinkMillis >= blinkInterval) {
       ledState = !ledState;
       blinkMillis = now;
     }
 
+    // 点滅 ON/OFF
     if (ledState) {
       analogWrite(PIN_LED_R, ledR);
       analogWrite(PIN_LED_G, ledG);
@@ -223,6 +236,7 @@ void updateLED() {
     }
   }
   else {
+    // 点滅なし → 常時点灯
     analogWrite(PIN_LED_R, ledR);
     analogWrite(PIN_LED_G, ledG);
     analogWrite(PIN_LED_B, ledB);
@@ -230,7 +244,7 @@ void updateLED() {
 }
 
 // =========================
-// 通常ライトモード
+// 手かざしライトモード
 // =========================
 void doLightMode() {
   int d = readDistance();
@@ -238,13 +252,12 @@ void doLightMode() {
 
   static unsigned long nearStartTime = 0;
 
-  const int NEAR_THRESHOLD = 5;   //  5cm以内で手を検知
-  const int HOLD_ON  = 1000;        // 消灯 → 点灯：1秒
-  const int HOLD_OFF = 1000;       // 点灯 → 消灯：1秒
+  const int NEAR_THRESHOLD = 5;   // 5cm以内で手を検知
+  const int HOLD_ON  = 1000;      // 消灯 → 点灯：1秒
+  const int HOLD_OFF = 1000;      // 点灯 → 消灯：1秒
 
   bool isNear = (d > 0 && d <= NEAR_THRESHOLD);
 
-  // デバッグ用（必要なら残す）
   Serial.print("LightMode distance = ");
   Serial.println(d);
 
@@ -257,18 +270,18 @@ void doLightMode() {
   // 手が近い状態が続いた時間
   unsigned long holdTime = now - nearStartTime;
 
-  // 点灯していない → 点灯させたい（0.5秒）
+  // 消灯 → 点灯
   if (!whiteLightState && handDetectedLast && holdTime >= HOLD_ON) {
     whiteLightState = true;
     handDetectedLast = false;
-    delay(300);  // チャタリング防止
+    delay(300);  // 誤作動防止
   }
 
-  // 点灯している → 消灯させたい（1秒）
+  // 点灯 → 消灯
   if (whiteLightState && handDetectedLast && holdTime >= HOLD_OFF) {
     whiteLightState = false;
     handDetectedLast = false;
-    delay(300);  // チャタリング防止
+    delay(300);
   }
 
   // 手を離したらリセット
@@ -276,7 +289,7 @@ void doLightMode() {
     handDetectedLast = false;
   }
 
-  // LED 出力
+  // LED 出力（白色ライト）
   if (whiteLightState) {
     analogWrite(PIN_LED_R, 255);
     analogWrite(PIN_LED_G, 255);
