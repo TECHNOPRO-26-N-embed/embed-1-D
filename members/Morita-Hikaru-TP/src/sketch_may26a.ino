@@ -1,8 +1,9 @@
-// ---- ピン設定 ----
 const int trigPin = 9;
 const int echoPin = 10;
-const int ledPin  = 3;
-const int motorPin = 5;
+const int ledPin  = 8;
+const int en1Pin  = 5;  // EN1 → D5
+const int in1Pin  = 4;  // IN1 → D4
+const int in2Pin  = 3;  // IN2 → D3
 
 // ---- 定数 ----
 const int SENSOR_INTERVAL = 100;  // 100ms周期
@@ -20,11 +21,13 @@ void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(ledPin, OUTPUT);
-  pinMode(motorPin, OUTPUT);
+  pinMode(en1Pin, OUTPUT);
+  pinMode(in1Pin, OUTPUT);
+  pinMode(in2Pin, OUTPUT);
 
   Serial.begin(9600);
   digitalWrite(ledPin, LOW);
-  digitalWrite(motorPin, LOW);
+  motoroff();
 }
 
 // ===============================
@@ -87,10 +90,10 @@ void updateState() {
 void updateOutput() {
   if (currentState == 1) {
     turnOnLED();
-    motorOn();
+    motorOn(); 
   } else {
     turnOffLED();
-    motorOff();
+    motoroff();
   }
 }
 
@@ -112,14 +115,20 @@ void turnOffLED() {
 // モーター ON
 // ===============================
 void motorOn() {
-  digitalWrite(motorPin, HIGH);
+  digitalWrite(en1Pin, HIGH);  // 有効化
+  digitalWrite(in1Pin, HIGH);  // IN1: HIGH
+  digitalWrite(in2Pin, LOW);   // IN2: LOW
 }
+
+
 
 // ===============================
 // モーター OFF
 // ===============================
-void motorOff() {
-  digitalWrite(motorPin, LOW);
+void motoroff() {
+  digitalWrite(en1Pin, LOW);   // 無効化
+  digitalWrite(in1Pin, LOW);
+  digitalWrite(in2Pin, LOW);
 }
 
 
